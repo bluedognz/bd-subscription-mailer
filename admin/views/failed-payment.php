@@ -82,6 +82,7 @@ $bdsm_team_tags     = '<code>{customer_first_name}</code> <code>{customer_email}
 						'media_buttons' => false,
 					)
 				);
+				BDSM_Admin::render_test_controls( 'bdsm_fp_subject_' . $bdsm_num, 'bdsm_fp_body_' . $bdsm_num );
 				?>
 
 				<p class="description">

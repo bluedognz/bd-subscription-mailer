@@ -54,6 +54,7 @@ $bdsm_emails = bdsm_get_card_expiry_emails();
 						'media_buttons' => false,
 					)
 				);
+				BDSM_Admin::render_test_controls( 'bdsm_ce_subject_' . $bdsm_days, 'bdsm_ce_body_' . $bdsm_days );
 				?>
 			</div>
 		</div>

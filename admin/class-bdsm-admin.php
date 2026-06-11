@@ -37,6 +37,7 @@ class BDSM_Admin {
 
 		add_action( 'admin_menu', array( $this, 'register_menu' ) );
 		add_action( 'admin_init', array( $this, 'handle_actions' ) );
+		add_action( 'wp_ajax_bdsm_send_test', array( $this, 'ajax_send_test' ) );
 	}
 
 	/**
@@ -112,6 +113,9 @@ class BDSM_Admin {
 			<?php include BDSM_PLUGIN_DIR . 'admin/views/' . $current . '.php'; ?>
 		</div>
 		<?php
+		if ( in_array( $current, array( 'task-reminder', 'failed-payment', 'card-expiry' ), true ) ) {
+			$this->print_test_script();
+		}
 	}
 
 	/**
@@ -311,6 +315,143 @@ class BDSM_Admin {
 				)
 			);
 		}
+	}
+
+	/**
+	 * Render the "send test email" controls under an email editor.
+	 *
+	 * @param string $subject_id DOM id of the subject input.
+	 * @param string $editor_id  DOM id of the wp_editor textarea.
+	 */
+	public static function render_test_controls( $subject_id, $editor_id ) {
+		?>
+		<p class="bdsm-test-row" style="margin-top:8px;padding-top:8px;border-top:1px dashed #ccd0d4;">
+			<input type="email" class="regular-text bdsm-test-email"
+				placeholder="<?php esc_attr_e( 'you@example.com', 'bd-subscription-mailer' ); ?>">
+			<button type="button" class="button bdsm-test-send"
+				data-subject="<?php echo esc_attr( $subject_id ); ?>"
+				data-editor="<?php echo esc_attr( $editor_id ); ?>">
+				<?php esc_html_e( 'Send test email', 'bd-subscription-mailer' ); ?>
+			</button>
+			<span class="bdsm-test-result" style="margin-left:8px;"></span>
+			<br><em class="description"><?php esc_html_e( 'Sends the content currently in this editor (saved or not) with sample data in place of template tags. No CC is added.', 'bd-subscription-mailer' ); ?></em>
+		</p>
+		<?php
+	}
+
+	/**
+	 * Print the test-email JS once, after the tab views.
+	 */
+	private function print_test_script() {
+		?>
+		<script>
+		( function () {
+			function bdsmGetBody( id ) {
+				if ( window.tinymce ) {
+					var ed = window.tinymce.get( id );
+					if ( ed && ! ed.isHidden() ) {
+						return ed.getContent();
+					}
+				}
+				var ta = document.getElementById( id );
+				return ta ? ta.value : '';
+			}
+
+			document.addEventListener( 'click', function ( e ) {
+				var btn = e.target.closest( '.bdsm-test-send' );
+				if ( ! btn ) {
+					return;
+				}
+
+				var row     = btn.closest( '.bdsm-test-row' );
+				var email   = row.querySelector( '.bdsm-test-email' ).value.trim();
+				var result  = row.querySelector( '.bdsm-test-result' );
+				var subject = document.getElementById( btn.dataset.subject );
+
+				if ( ! email || email.indexOf( '@' ) < 1 ) {
+					result.style.color = '#d63638';
+					result.textContent = <?php echo wp_json_encode( __( 'Enter a valid email address first.', 'bd-subscription-mailer' ) ); ?>;
+					return;
+				}
+
+				btn.disabled       = true;
+				result.style.color = '';
+				result.textContent = <?php echo wp_json_encode( __( 'Sending…', 'bd-subscription-mailer' ) ); ?>;
+
+				var fd = new FormData();
+				fd.append( 'action', 'bdsm_send_test' );
+				fd.append( '_ajax_nonce', <?php echo wp_json_encode( wp_create_nonce( 'bdsm_send_test' ) ); ?> );
+				fd.append( 'test_email', email );
+				fd.append( 'subject', subject ? subject.value : '' );
+				fd.append( 'body', bdsmGetBody( btn.dataset.editor ) );
+
+				fetch( window.ajaxurl, { method: 'POST', credentials: 'same-origin', body: fd } )
+					.then( function ( r ) { return r.json(); } )
+					.then( function ( data ) {
+						result.style.color = data.success ? '#00a32a' : '#d63638';
+						result.textContent = ( data.data && data.data.message ) ? data.data.message : '';
+					} )
+					.catch( function () {
+						result.style.color = '#d63638';
+						result.textContent = <?php echo wp_json_encode( __( 'Request failed.', 'bd-subscription-mailer' ) ); ?>;
+					} )
+					.finally( function () {
+						btn.disabled = false;
+					} );
+			} );
+		}() );
+		</script>
+		<?php
+	}
+
+	/**
+	 * AJAX: send a test email with sample tag values.
+	 */
+	public function ajax_send_test() {
+		check_ajax_referer( 'bdsm_send_test' );
+
+		if ( ! current_user_can( self::CAPABILITY ) ) {
+			wp_send_json_error( array( 'message' => __( 'Not allowed.', 'bd-subscription-mailer' ) ) );
+		}
+
+		$to      = isset( $_POST['test_email'] ) ? sanitize_email( wp_unslash( $_POST['test_email'] ) ) : '';
+		$subject = isset( $_POST['subject'] ) ? sanitize_text_field( wp_unslash( $_POST['subject'] ) ) : '';
+		$body    = isset( $_POST['body'] ) ? wp_kses_post( wp_unslash( $_POST['body'] ) ) : '';
+
+		if ( ! is_email( $to ) ) {
+			wp_send_json_error( array( 'message' => __( 'Invalid email address.', 'bd-subscription-mailer' ) ) );
+		}
+		if ( '' === trim( $body ) ) {
+			wp_send_json_error( array( 'message' => __( 'The email body is empty.', 'bd-subscription-mailer' ) ) );
+		}
+
+		$tags = array(
+			'customer_first_name' => 'Jane',
+			'customer_email'      => 'customer@example.com',
+			'subscription_id'     => '12345',
+			'product_name'        => __( 'Example Subscription Product', 'bd-subscription-mailer' ),
+			'support_link'        => bdsm_support_link() ? bdsm_support_link() : 'https://example.com/support',
+			'site_name'           => get_bloginfo( 'name' ),
+			'order_total'         => function_exists( 'wc_price' ) ? wp_strip_all_tags( wc_price( 49 ) ) : '$49.00',
+			'payment_update_link' => function_exists( 'wc_get_page_permalink' ) ? wc_get_page_permalink( 'myaccount' ) : home_url( '/my-account/' ),
+			'customer_domain'     => 'example.com',
+			'days_overdue'        => '8',
+			'card_expiry_month'   => '09',
+			'card_expiry_year'    => '2027',
+		);
+
+		$sent = BDSM_Mailer::send( $to, '[TEST] ' . $subject, $body, $tags );
+
+		if ( $sent ) {
+			wp_send_json_success(
+				array(
+					/* translators: %s: recipient email address. */
+					'message' => sprintf( __( 'Test sent to %s.', 'bd-subscription-mailer' ), $to ),
+				)
+			);
+		}
+
+		wp_send_json_error( array( 'message' => __( 'wp_mail() failed — check your SMTP configuration.', 'bd-subscription-mailer' ) ) );
 	}
 
 	/**

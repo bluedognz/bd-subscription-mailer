@@ -97,6 +97,7 @@ $bdsm_products = wc_get_products(
 						'media_buttons' => false,
 					)
 				);
+				BDSM_Admin::render_test_controls( 'bdsm_tr_subject_' . $bdsm_pid, 'bdsm_tr_body_' . $bdsm_pid );
 				?>
 			</div>
 		</div>

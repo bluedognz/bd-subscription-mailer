@@ -60,6 +60,10 @@ Each feature tab has WordPress TinyMCE editors:
 
 Changing a delay only affects sequences scheduled **after** the save; already-queued emails keep their original send time (cancel them on the Queue tab if needed).
 
+### Test emails
+
+Every editor has a **Send test email** box underneath it: enter an address and click the button. The test uses whatever is currently in the editor (no need to save first), fills all template tags with sample data, prefixes the subject with `[TEST]`, and sends only to that address — CC settings are not applied.
+
 ## Template tags
 
 Type tags directly into subjects or bodies; they're replaced at send time.
