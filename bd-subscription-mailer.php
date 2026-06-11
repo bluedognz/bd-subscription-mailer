@@ -3,9 +3,9 @@
  * Plugin Name:       BD Subscription Mailer
  * Plugin URI:        https://github.com/bluedognz/bd-subscription-mailer
  * Description:       Lightweight automated emails for WooCommerce Subscriptions — payment task reminders, failed payment sequences and card expiry warnings. Replaces AutomateWoo.
- * Version:           1.1.0
- * Author:            Blue Dog
- * Author URI:        https://bluedogwebdesign.com
+ * Version:           1.2.0
+ * Author:            Blue Dog Digital
+ * Author URI:        https://www.bluedogdigitalmarketing.com/
  * Text Domain:       bd-subscription-mailer
  * Requires at least: 6.4
  * Requires PHP:      8.1
@@ -17,7 +17,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'BDSM_VERSION', '1.1.0' );
+define( 'BDSM_VERSION', '1.2.0' );
 define( 'BDSM_PLUGIN_FILE', __FILE__ );
 define( 'BDSM_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'BDSM_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
@@ -25,6 +25,22 @@ define( 'BDSM_AS_GROUP', 'bd-subscription-mailer' );
 
 require_once BDSM_PLUGIN_DIR . 'includes/bdsm-functions.php';
 require_once BDSM_PLUGIN_DIR . 'includes/class-bdsm-install.php';
+
+// ── GitHub auto-updates via Plugin Update Checker ────────────
+require_once BDSM_PLUGIN_DIR . 'plugin-update-checker/plugin-update-checker.php';
+
+$bdsm_updater = \YahnisElsts\PluginUpdateChecker\v5\PucFactory::buildUpdateChecker(
+	'https://github.com/bluedognz/bd-subscription-mailer',
+	__FILE__,
+	'bd-subscription-mailer'
+);
+$bdsm_updater->getVcsApi()->enableReleaseAssets();
+
+// Optional: define in wp-config.php to avoid GitHub rate limits.
+//   define( 'BDSM_GH_TOKEN', 'ghp_yourtoken' );
+if ( defined( 'BDSM_GH_TOKEN' ) && BDSM_GH_TOKEN ) {
+	$bdsm_updater->setAuthentication( BDSM_GH_TOKEN );
+}
 
 register_activation_hook( __FILE__, array( 'BDSM_Install', 'activate' ) );
 register_deactivation_hook( __FILE__, array( 'BDSM_Install', 'deactivate' ) );

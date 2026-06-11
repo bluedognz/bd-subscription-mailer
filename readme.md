@@ -21,6 +21,18 @@ All scheduling uses **Action Scheduler** (bundled with WooCommerce) — no wp-cr
 
 Activation creates two tables (`{prefix}bdSM_log`, `{prefix}bdSM_expiry_sent`) and schedules the daily 7:00am UTC card-expiry job.
 
+## Updates
+
+The plugin auto-updates from GitHub releases via the bundled [Plugin Update Checker](https://github.com/YahnisElsts/plugin-update-checker). When a new release is published at [bluedognz/bd-subscription-mailer](https://github.com/bluedognz/bd-subscription-mailer), every site shows the update on **Dashboard → Updates / Plugins** like any other plugin (the zip attached to the release is what gets installed). Only the first install is manual.
+
+To publish an update: bump the `Version` header, commit, push, tag (e.g. `v1.2.1`) and create a GitHub release with the plugin zip attached.
+
+Optional, avoids GitHub API rate limits on sites that check frequently — add to `wp-config.php`:
+
+```php
+define( 'BDSM_GH_TOKEN', 'ghp_yourtoken' );
+```
+
 ## Toggling features per site
 
 Under the **Settings** tab:
