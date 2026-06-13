@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-label="BD Subscription Mailer">
+	<defs>
+		<linearGradient id="bdsm-bg" x1="0" y1="0" x2="0" y2="1">
+			<stop offset="0" stop-color="#2b6cb0"/>
+			<stop offset="1" stop-color="#1a4e8a"/>
+		</linearGradient>
+	</defs>
+
+	<rect width="256" height="256" rx="48" fill="url(#bdsm-bg)"/>
+
+	<!-- Envelope -->
+	<g>
+		<rect x="52" y="78" width="152" height="104" rx="14" fill="#ffffff"/>
+		<path d="M52 96 L128 144 L204 96" fill="none" stroke="#1a4e8a" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
+	</g>
+
+	<!-- Clock badge (scheduled / automated) -->
+	<g transform="translate(168,150)">
+		<circle r="34" fill="#f6ad28" stroke="#ffffff" stroke-width="8"/>
+		<path d="M0 -18 L0 0 L13 11" fill="none" stroke="#1a4e8a" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+	</g>
+</svg>

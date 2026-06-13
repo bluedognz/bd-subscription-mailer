@@ -116,6 +116,7 @@ class BDSM_Admin {
 		<?php
 		if ( in_array( $current, array( 'task-reminder', 'failed-payment', 'card-expiry' ), true ) ) {
 			$this->print_test_script();
+			$this->print_collapse_script();
 		}
 	}
 
@@ -551,6 +552,50 @@ class BDSM_Admin {
 					.finally( function () {
 						btn.disabled = false;
 					} );
+			} );
+		}() );
+		</script>
+		<?php
+	}
+
+	/**
+	 * Print the collapse/expand JS once, after the tab views. Relies on the
+	 * core .postbox.closed CSS to hide the body and rotate the chevron.
+	 */
+	private function print_collapse_script() {
+		?>
+		<script>
+		( function () {
+			function setState( box, closed ) {
+				box.classList.toggle( 'closed', closed );
+				var btn = box.querySelector( '.handlediv' );
+				if ( btn ) {
+					btn.setAttribute( 'aria-expanded', closed ? 'false' : 'true' );
+				}
+			}
+
+			document.addEventListener( 'click', function ( e ) {
+				if ( e.target.closest( '.bdsm-collapse-all' ) ) {
+					document.querySelectorAll( '.bdsm-collapsible' ).forEach( function ( b ) { setState( b, true ); } );
+					return;
+				}
+				if ( e.target.closest( '.bdsm-expand-all' ) ) {
+					document.querySelectorAll( '.bdsm-collapsible' ).forEach( function ( b ) { setState( b, false ); } );
+					return;
+				}
+
+				var hdr = e.target.closest( '.bdsm-collapse-header' );
+				if ( ! hdr ) {
+					return;
+				}
+				// Don't toggle when interacting with the enable checkbox / its label / a link.
+				if ( e.target.closest( 'input, a, label' ) ) {
+					return;
+				}
+				var box = hdr.closest( '.bdsm-collapsible' );
+				if ( box ) {
+					setState( box, ! box.classList.contains( 'closed' ) );
+				}
 			} );
 		}() );
 		</script>

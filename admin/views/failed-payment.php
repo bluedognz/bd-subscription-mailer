@@ -17,14 +17,19 @@ $bdsm_team_tags     = '<code>{customer_first_name}</code> <code>{customer_email}
 	<?php esc_html_e( 'The full sequence is scheduled when a subscription payment fails. Before each send the subscription is re-checked: if payment has recovered or the subscription was cancelled, all remaining emails are cancelled silently.', 'bd-subscription-mailer' ); ?>
 </p>
 
+<p class="bdsm-collapse-tools" style="margin:12px 0 0;">
+	<button type="button" class="button-link bdsm-expand-all"><?php esc_html_e( 'Expand all', 'bd-subscription-mailer' ); ?></button> |
+	<button type="button" class="button-link bdsm-collapse-all"><?php esc_html_e( 'Collapse all', 'bd-subscription-mailer' ); ?></button>
+</p>
+
 <form method="post">
 	<?php wp_nonce_field( 'bdsm_save_failed_payment' ); ?>
 	<input type="hidden" name="bdsm_action" value="save_failed_payment">
 
 	<?php foreach ( $bdsm_messages as $bdsm_num => $bdsm_msg ) : ?>
 		<?php $bdsm_is_team = $bdsm_num >= 5; ?>
-		<div class="postbox" style="margin-top:16px;">
-			<div class="postbox-header" style="padding:10px 12px;">
+		<div class="postbox bdsm-collapsible" style="margin-top:16px;">
+			<div class="postbox-header bdsm-collapse-header" style="padding:10px 12px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;">
 				<strong>
 					<?php
 					printf(
@@ -35,7 +40,17 @@ $bdsm_team_tags     = '<code>{customer_first_name}</code> <code>{customer_email}
 					?>
 					—
 					<?php echo $bdsm_is_team ? esc_html__( 'TEAM (internal)', 'bd-subscription-mailer' ) : esc_html__( 'Customer', 'bd-subscription-mailer' ); ?>
+					<span style="color:#888;font-weight:400;">
+						<?php
+						printf(
+							/* translators: %s: delay in days. */
+							esc_html__( '(%s-day delay)', 'bd-subscription-mailer' ),
+							esc_html( rtrim( rtrim( (string) $bdsm_msg['delay_days'], '0' ), '.' ) )
+						);
+						?>
+					</span>
 				</strong>
+				<button type="button" class="handlediv" aria-expanded="true"><span class="screen-reader-text"><?php esc_html_e( 'Toggle panel', 'bd-subscription-mailer' ); ?></span><span class="toggle-indicator" aria-hidden="true"></span></button>
 			</div>
 			<div class="inside">
 				<p>

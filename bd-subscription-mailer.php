@@ -3,7 +3,7 @@
  * Plugin Name:       BD Subscription Mailer
  * Plugin URI:        https://github.com/bluedognz/bd-subscription-mailer
  * Description:       Lightweight automated emails for WooCommerce Subscriptions — payment task reminders, failed payment sequences and card expiry warnings. Replaces AutomateWoo.
- * Version:           1.4.0
+ * Version:           1.5.0
  * Author:            Blue Dog Digital
  * Author URI:        https://www.bluedogdigitalmarketing.com/
  * Text Domain:       bd-subscription-mailer
@@ -17,7 +17,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'BDSM_VERSION', '1.4.0' );
+define( 'BDSM_VERSION', '1.5.0' );
 define( 'BDSM_PLUGIN_FILE', __FILE__ );
 define( 'BDSM_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'BDSM_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
@@ -41,6 +41,21 @@ $bdsm_updater->getVcsApi()->enableReleaseAssets();
 if ( defined( 'BDSM_GH_TOKEN' ) && BDSM_GH_TOKEN ) {
 	$bdsm_updater->setAuthentication( BDSM_GH_TOKEN );
 }
+
+// Show the plugin icon on the Updates / Plugins screens and details modal.
+add_filter(
+	'puc_request_info_result-bd-subscription-mailer',
+	function ( $info ) {
+		if ( is_object( $info ) ) {
+			$info->icons = array(
+				'svg' => BDSM_PLUGIN_URL . 'assets/icon.svg',
+				'1x'  => BDSM_PLUGIN_URL . 'assets/icon-128.png',
+				'2x'  => BDSM_PLUGIN_URL . 'assets/icon-256.png',
+			);
+		}
+		return $info;
+	}
+);
 
 register_activation_hook( __FILE__, array( 'BDSM_Install', 'activate' ) );
 register_deactivation_hook( __FILE__, array( 'BDSM_Install', 'deactivate' ) );

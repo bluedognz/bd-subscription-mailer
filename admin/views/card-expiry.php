@@ -17,13 +17,18 @@ $bdsm_emails = bdsm_get_card_expiry_emails();
 	<code>{customer_first_name}</code> <code>{customer_email}</code> <code>{card_expiry_month}</code> <code>{card_expiry_year}</code> <code>{payment_update_link}</code> <code>{site_name}</code>
 </p>
 
+<p class="bdsm-collapse-tools" style="margin:12px 0 0;">
+	<button type="button" class="button-link bdsm-expand-all"><?php esc_html_e( 'Expand all', 'bd-subscription-mailer' ); ?></button> |
+	<button type="button" class="button-link bdsm-collapse-all"><?php esc_html_e( 'Collapse all', 'bd-subscription-mailer' ); ?></button>
+</p>
+
 <form method="post">
 	<?php wp_nonce_field( 'bdsm_save_card_expiry' ); ?>
 	<input type="hidden" name="bdsm_action" value="save_card_expiry">
 
 	<?php foreach ( $bdsm_emails as $bdsm_days => $bdsm_email ) : ?>
-		<div class="postbox" style="margin-top:16px;">
-			<div class="postbox-header" style="padding:10px 12px;">
+		<div class="postbox bdsm-collapsible" style="margin-top:16px;">
+			<div class="postbox-header bdsm-collapse-header" style="padding:10px 12px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;">
 				<strong>
 					<?php
 					printf(
@@ -33,6 +38,7 @@ $bdsm_emails = bdsm_get_card_expiry_emails();
 					);
 					?>
 				</strong>
+				<button type="button" class="handlediv" aria-expanded="true"><span class="screen-reader-text"><?php esc_html_e( 'Toggle panel', 'bd-subscription-mailer' ); ?></span><span class="toggle-indicator" aria-hidden="true"></span></button>
 			</div>
 			<div class="inside">
 				<p>

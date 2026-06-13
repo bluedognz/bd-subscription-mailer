@@ -54,6 +54,8 @@ Failed Payment and Card Expiry are always active while the plugin is enabled.
 
 Each feature tab has WordPress TinyMCE editors:
 
+Each email panel on these tabs can be **collapsed/expanded** by clicking its header (or the arrow), with **Expand all / Collapse all** links at the top — handy when managing many emails at once.
+
 - **Task Reminder** — every published subscription product is listed. Tick the checkbox to enable it, then set a subject and body. Only ticked products trigger emails. A product with no body content is skipped (and logged).
 - **Failed Payment** — six messages, each with subject, body and an editable **delay in days** (measured from the original failure timestamp, defaults 1 / 2 / 4 / 7 / 8 / 38). Messages 1–4 always go to the customer. Messages 5–6 have an editable internal recipient field (falls back to the site admin email if empty) — the customer is never sent these.
 - **Card Expiry** — three emails (45, 20, 7 days before expiry), each with subject and body.

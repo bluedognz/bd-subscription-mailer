@@ -56,7 +56,12 @@ $bdsm_products = wc_get_products(
 	<?php wp_nonce_field( 'bdsm_save_task_reminder' ); ?>
 	<input type="hidden" name="bdsm_action" value="save_task_reminder">
 
-	<div class="bdsm-tr-grid" style="margin-top:16px;">
+	<p class="bdsm-collapse-tools" style="margin:12px 0 0;">
+		<button type="button" class="button-link bdsm-expand-all"><?php esc_html_e( 'Expand all', 'bd-subscription-mailer' ); ?></button> |
+		<button type="button" class="button-link bdsm-collapse-all"><?php esc_html_e( 'Collapse all', 'bd-subscription-mailer' ); ?></button>
+	</p>
+
+	<div class="bdsm-tr-grid" style="margin-top:12px;">
 	<?php
 	foreach ( $bdsm_products as $bdsm_product ) :
 		$bdsm_pid   = $bdsm_product->get_id();
@@ -69,13 +74,14 @@ $bdsm_products = wc_get_products(
 			)
 		);
 		?>
-		<div class="postbox">
-			<div class="postbox-header" style="padding:10px 12px;">
+		<div class="postbox bdsm-collapsible">
+			<div class="postbox-header bdsm-collapse-header" style="padding:10px 12px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;">
 				<label style="font-weight:600;">
 					<input type="checkbox" name="bdsm_tr_enabled[]" value="<?php echo esc_attr( $bdsm_pid ); ?>" <?php checked( 1, (int) $bdsm_entry['enabled'] ); ?>>
 					<?php echo esc_html( $bdsm_product->get_name() ); ?>
 					<span style="color:#888;font-weight:400;">(#<?php echo esc_html( $bdsm_pid ); ?>)</span>
 				</label>
+				<button type="button" class="handlediv" aria-expanded="true"><span class="screen-reader-text"><?php esc_html_e( 'Toggle panel', 'bd-subscription-mailer' ); ?></span><span class="toggle-indicator" aria-hidden="true"></span></button>
 			</div>
 			<div class="inside">
 				<input type="hidden" name="bdsm_tr_product_ids[]" value="<?php echo esc_attr( $bdsm_pid ); ?>">
