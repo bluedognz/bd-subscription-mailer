@@ -92,6 +92,12 @@ A successful payment also cancels the queue immediately. A repeat failure restar
 
 **Card Expiry** runs daily at 7:00am UTC, on active subscriptions only. Expiry is read from `_stripe_card_expiry_month` / `_stripe_card_expiry_year` on the subscription or its parent order, with `_payment_method_expiry_date` (`MM/YY`, `MM/YYYY` or `YYYY-MM`) as fallback; subscriptions with no card data are skipped. Sent warnings are recorded per subscription **and card expiry date** in `bdSM_expiry_sent`, so duplicates are impossible but a newly saved card gets a fresh set of warnings. If a tier's exact day was missed (site offline etc.), the most urgent applicable warning is sent on the next run instead of being lost.
 
+## Copying content between sites
+
+The **Export / Import** tab moves email content between sites without retyping. Export produces a Base64 string covering the **Failed Payment** emails, the **Card Expiry** emails, and (optionally on import) the support link + CC addresses. Paste it into the Import box on the other site and tick which sections to apply — leave **Settings** unticked to keep that site's own CC addresses.
+
+Task Reminder content is deliberately excluded: it is keyed by product ID, which differs per site. The plugin-enable and Task Reminder toggles are never imported either, so a site's on/off state is always preserved.
+
 ## Log & Queue
 
 - **Log** — last 200 events (sent / skipped / cancelled) with date, feature, customer, subscription and message number. Clear button included. The table self-trims to 1,000 rows.

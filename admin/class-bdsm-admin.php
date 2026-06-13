@@ -31,6 +31,7 @@ class BDSM_Admin {
 			'task-reminder'  => __( 'Task Reminder', 'bd-subscription-mailer' ),
 			'failed-payment' => __( 'Failed Payment', 'bd-subscription-mailer' ),
 			'card-expiry'    => __( 'Card Expiry', 'bd-subscription-mailer' ),
+			'export-import'  => __( 'Export / Import', 'bd-subscription-mailer' ),
 			'log'            => __( 'Log', 'bd-subscription-mailer' ),
 			'queue'          => __( 'Queue', 'bd-subscription-mailer' ),
 		);
@@ -148,6 +149,10 @@ class BDSM_Admin {
 			case 'save_card_expiry':
 				$this->save_card_expiry();
 				$this->redirect( 'card-expiry' );
+				break;
+
+			case 'import_data':
+				$this->import_data();
 				break;
 
 			case 'clear_log':
@@ -315,6 +320,154 @@ class BDSM_Admin {
 				)
 			);
 		}
+	}
+
+	/**
+	 * Build the Base64 export string for the portable email content.
+	 *
+	 * Task Reminder is intentionally excluded — it is keyed by product ID,
+	 * which differs between sites.
+	 *
+	 * @return string Base64-encoded JSON payload.
+	 */
+	public static function build_export_string() {
+		$settings = bdsm_get_settings();
+
+		$payload = array(
+			'_bdsm_export' => 1,
+			'version'      => BDSM_VERSION,
+			'site'         => home_url(),
+			'date'         => current_time( 'mysql' ),
+			'data'         => array(
+				'failed_payment' => bdsm_get_failed_payment_messages(),
+				'card_expiry'    => bdsm_get_card_expiry_emails(),
+				'settings'       => array(
+					'support_link'      => $settings['support_link'],
+					'task_reminder_cc'  => $settings['task_reminder_cc'],
+					'failed_payment_cc' => $settings['failed_payment_cc'],
+					'card_expiry_cc'    => $settings['card_expiry_cc'],
+				),
+			),
+		);
+
+		return base64_encode( (string) wp_json_encode( $payload ) ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode -- portable transport string, not obfuscation.
+	}
+
+	/**
+	 * Decode an export string into its payload array.
+	 *
+	 * @param string $string Base64 export string.
+	 * @return array|WP_Error
+	 */
+	public static function decode_export_string( $string ) {
+		$json = base64_decode( trim( $string ), true ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_decode -- portable transport string.
+		if ( false === $json ) {
+			return new WP_Error( 'bdsm_import', __( 'That is not a valid export string.', 'bd-subscription-mailer' ) );
+		}
+
+		$payload = json_decode( $json, true );
+		if ( ! is_array( $payload ) || empty( $payload['_bdsm_export'] ) || empty( $payload['data'] ) ) {
+			return new WP_Error( 'bdsm_import', __( 'That export string is not from BD Subscription Mailer.', 'bd-subscription-mailer' ) );
+		}
+
+		return $payload;
+	}
+
+	/**
+	 * Apply a pasted export string to the selected sections.
+	 */
+	private function import_data() {
+		check_admin_referer( 'bdsm_import_data' );
+
+		$string  = isset( $_POST['bdsm_import_string'] ) ? wp_unslash( $_POST['bdsm_import_string'] ) : ''; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- decoded and sanitised field-by-field below.
+		$payload = self::decode_export_string( $string );
+
+		if ( is_wp_error( $payload ) ) {
+			$this->redirect_with( 'export-import', 'bdsm_import_error', rawurlencode( $payload->get_error_message() ) );
+		}
+
+		$sections = isset( $_POST['bdsm_import_sections'] ) ? array_map( 'sanitize_key', (array) wp_unslash( $_POST['bdsm_import_sections'] ) ) : array();
+		$data     = $payload['data'];
+		$applied  = array();
+
+		if ( in_array( 'failed_payment', $sections, true ) && ! empty( $data['failed_payment'] ) ) {
+			update_option( 'bdsm_failed_payment', $this->sanitize_failed_payment_import( (array) $data['failed_payment'] ) );
+			$applied[] = __( 'Failed Payment emails', 'bd-subscription-mailer' );
+		}
+
+		if ( in_array( 'card_expiry', $sections, true ) && ! empty( $data['card_expiry'] ) ) {
+			update_option( 'bdsm_card_expiry', $this->sanitize_card_expiry_import( (array) $data['card_expiry'] ) );
+			$applied[] = __( 'Card Expiry emails', 'bd-subscription-mailer' );
+		}
+
+		if ( in_array( 'settings', $sections, true ) && ! empty( $data['settings'] ) ) {
+			$current = bdsm_get_settings();
+			$in      = (array) $data['settings'];
+
+			$current['support_link']      = isset( $in['support_link'] ) ? esc_url_raw( $in['support_link'] ) : $current['support_link'];
+			$current['task_reminder_cc']  = isset( $in['task_reminder_cc'] ) ? sanitize_email( $in['task_reminder_cc'] ) : $current['task_reminder_cc'];
+			$current['failed_payment_cc'] = isset( $in['failed_payment_cc'] ) ? sanitize_email( $in['failed_payment_cc'] ) : $current['failed_payment_cc'];
+			$current['card_expiry_cc']    = isset( $in['card_expiry_cc'] ) ? sanitize_email( $in['card_expiry_cc'] ) : $current['card_expiry_cc'];
+
+			update_option( 'bdsm_settings', $current );
+			$applied[] = __( 'Settings (support link + CC addresses)', 'bd-subscription-mailer' );
+		}
+
+		if ( empty( $applied ) ) {
+			$this->redirect_with( 'export-import', 'bdsm_import_error', rawurlencode( __( 'Nothing imported — select at least one section.', 'bd-subscription-mailer' ) ) );
+		}
+
+		$this->redirect_with( 'export-import', 'bdsm_imported', rawurlencode( implode( ', ', $applied ) ) );
+	}
+
+	/**
+	 * Sanitise imported failed-payment messages, merged onto defaults.
+	 *
+	 * @param array $in Imported messages.
+	 * @return array
+	 */
+	private function sanitize_failed_payment_import( array $in ) {
+		$out = array();
+		foreach ( bdsm_default_failed_messages() as $num => $defaults ) {
+			$row            = isset( $in[ $num ] ) && is_array( $in[ $num ] ) ? $in[ $num ] : array();
+			$out[ $num ]    = array(
+				'subject'    => isset( $row['subject'] ) ? sanitize_text_field( $row['subject'] ) : $defaults['subject'],
+				'body'       => isset( $row['body'] ) ? wp_kses_post( $row['body'] ) : $defaults['body'],
+				'delay_days' => isset( $row['delay_days'] ) ? max( 0, (float) $row['delay_days'] ) : $defaults['delay_days'],
+				'recipient'  => ( $num >= 5 && isset( $row['recipient'] ) && is_email( $row['recipient'] ) ) ? sanitize_email( $row['recipient'] ) : 'customer',
+			);
+		}
+		return $out;
+	}
+
+	/**
+	 * Sanitise imported card-expiry emails, merged onto defaults.
+	 *
+	 * @param array $in Imported emails.
+	 * @return array
+	 */
+	private function sanitize_card_expiry_import( array $in ) {
+		$out = array();
+		foreach ( bdsm_default_expiry_emails() as $days => $defaults ) {
+			$row           = isset( $in[ $days ] ) && is_array( $in[ $days ] ) ? $in[ $days ] : array();
+			$out[ $days ]  = array(
+				'subject' => isset( $row['subject'] ) ? sanitize_text_field( $row['subject'] ) : $defaults['subject'],
+				'body'    => isset( $row['body'] ) ? wp_kses_post( $row['body'] ) : $defaults['body'],
+			);
+		}
+		return $out;
+	}
+
+	/**
+	 * Redirect to a tab with one query arg set.
+	 *
+	 * @param string $tab   Tab slug.
+	 * @param string $key   Query arg key.
+	 * @param string $value Query arg value (already URL-encoded if needed).
+	 */
+	private function redirect_with( $tab, $key, $value = '1' ) {
+		wp_safe_redirect( add_query_arg( $key, $value, self::tab_url( $tab ) ) );
+		exit;
 	}
 
 	/**
