@@ -37,6 +37,8 @@ function bdsm_get_settings() {
 		'enabled'           => 'yes',
 		'feature1_enabled'  => 'no',
 		'support_link'      => '',
+		'from_name'         => '',
+		'from_email'        => '',
 		'task_reminder_cc'  => '',
 		'failed_payment_cc' => '',
 		'card_expiry_cc'    => '',
@@ -72,6 +74,28 @@ function bdsm_feature1_enabled() {
 function bdsm_support_link() {
 	$settings = bdsm_get_settings();
 	return $settings['support_link'];
+}
+
+/**
+ * Build a "From: Name <email>" header from settings, or empty string when
+ * no valid From email is configured (lets WordPress / WP Mail SMTP decide).
+ *
+ * @return string
+ */
+function bdsm_from_header() {
+	$settings = bdsm_get_settings();
+	$email    = $settings['from_email'];
+
+	if ( ! is_email( $email ) ) {
+		return '';
+	}
+
+	$name = trim( (string) $settings['from_name'] );
+	if ( '' === $name ) {
+		return 'From: ' . $email;
+	}
+
+	return sprintf( 'From: %s <%s>', $name, $email );
 }
 
 /**

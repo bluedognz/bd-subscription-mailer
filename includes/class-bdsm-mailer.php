@@ -31,7 +31,11 @@ class BDSM_Mailer {
 		$body    = self::replace_tags( $body, $tags );
 		$html    = self::wrap( wpautop( $body ) );
 
-		$headers = array( 'Content-Type: text/html; charset=UTF-8' );
+		$headers   = array( 'Content-Type: text/html; charset=UTF-8' );
+		$from      = bdsm_from_header();
+		if ( '' !== $from ) {
+			$headers[] = $from;
+		}
 		if ( is_email( $cc ) && 0 !== strcasecmp( $cc, $to ) ) {
 			$headers[] = 'Cc: ' . $cc;
 		}

@@ -193,6 +193,8 @@ class BDSM_Admin {
 				'enabled'           => empty( $_POST['bdsm_enabled'] ) ? 'no' : 'yes',
 				'feature1_enabled'  => empty( $_POST['bdsm_feature1_enabled'] ) ? 'no' : 'yes',
 				'support_link'      => isset( $_POST['bdsm_support_link'] ) ? esc_url_raw( wp_unslash( $_POST['bdsm_support_link'] ) ) : '',
+				'from_name'         => isset( $_POST['bdsm_from_name'] ) ? sanitize_text_field( wp_unslash( $_POST['bdsm_from_name'] ) ) : '',
+				'from_email'        => isset( $_POST['bdsm_from_email'] ) ? sanitize_email( wp_unslash( $_POST['bdsm_from_email'] ) ) : '',
 				'task_reminder_cc'  => isset( $_POST['bdsm_task_reminder_cc'] ) ? sanitize_email( wp_unslash( $_POST['bdsm_task_reminder_cc'] ) ) : '',
 				'failed_payment_cc' => isset( $_POST['bdsm_failed_payment_cc'] ) ? sanitize_email( wp_unslash( $_POST['bdsm_failed_payment_cc'] ) ) : '',
 				'card_expiry_cc'    => isset( $_POST['bdsm_card_expiry_cc'] ) ? sanitize_email( wp_unslash( $_POST['bdsm_card_expiry_cc'] ) ) : '',

@@ -40,6 +40,7 @@ Under the **Settings** tab:
 | Setting | Notes |
 |---|---|
 | Enable plugin | Master switch. Off = nothing sends or schedules anywhere. |
+| From name / From email | Optional sender name and address for every email the plugin sends. Leave empty for the site default. **If WP Mail SMTP has "Force From" enabled it overrides these** — use a Postmark-authenticated domain. |
 | Task Reminder | Per-site toggle. Turn **on** for bluedogdigitalmarketing.com.au, **off** for bluedogwebsites.com. |
 | Task Reminder CC | Optional. Every Task Reminder email is CC'd to this address. |
 | Failed Payment CC | Optional. Every Failed Payment email (customer and internal) is CC'd to this address. |

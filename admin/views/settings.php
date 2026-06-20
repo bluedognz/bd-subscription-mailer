@@ -68,6 +68,32 @@ $bdsm_settings = bdsm_get_settings();
 		</tr>
 		<tr>
 			<th scope="row">
+				<label for="bdsm_from_name"><?php esc_html_e( 'From name', 'bd-subscription-mailer' ); ?></label>
+			</th>
+			<td>
+				<input type="text" class="regular-text" id="bdsm_from_name" name="bdsm_from_name"
+					value="<?php echo esc_attr( $bdsm_settings['from_name'] ); ?>"
+					placeholder="<?php echo esc_attr( get_bloginfo( 'name' ) ); ?>">
+				<p class="description"><?php esc_html_e( 'Sender name shown on all emails this plugin sends. Requires a From email below to take effect.', 'bd-subscription-mailer' ); ?></p>
+			</td>
+		</tr>
+		<tr>
+			<th scope="row">
+				<label for="bdsm_from_email"><?php esc_html_e( 'From email', 'bd-subscription-mailer' ); ?></label>
+			</th>
+			<td>
+				<input type="email" class="regular-text" id="bdsm_from_email" name="bdsm_from_email"
+					value="<?php echo esc_attr( $bdsm_settings['from_email'] ); ?>"
+					placeholder="billing@example.com">
+				<p class="description">
+					<?php esc_html_e( 'Sender address for all emails this plugin sends. Leave empty to use the site default.', 'bd-subscription-mailer' ); ?>
+					<br>
+					<?php esc_html_e( 'Note: if WP Mail SMTP (or similar) has "Force From Email / Name" enabled, that overrides these fields. Use an address on a domain authenticated in Postmark to protect deliverability.', 'bd-subscription-mailer' ); ?>
+				</p>
+			</td>
+		</tr>
+		<tr>
+			<th scope="row">
 				<label for="bdsm_support_link"><?php esc_html_e( 'Support link URL', 'bd-subscription-mailer' ); ?></label>
 			</th>
 			<td>
