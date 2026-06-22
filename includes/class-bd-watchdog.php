@@ -4,8 +4,8 @@
  *
  * Self-contained module that recovers subscriptions which were paid but
  * left stuck on-hold (e.g. a webhook race or a stale cache that prevented
- * the status update from firing). Runs on its own 30-minute WP-Cron event,
- * independent of the plugin's Action Scheduler email jobs.
+ * the status update from firing). Runs on its own recurring 30-minute
+ * Action Scheduler job, in the same group as the plugin's email jobs.
  *
  * @package BD_Subscription_Mailer
  */
@@ -18,9 +18,9 @@ defined( 'ABSPATH' ) || exit;
  */
 class BD_Watchdog {
 
-	const CRON_HOOK     = 'bd_watchdog_run';
-	const CRON_INTERVAL = 'bd_watchdog_interval';
-	const LOG_SOURCE    = 'bd-subscription-watchdog';
+	const CRON_HOOK        = 'bd_watchdog_run';
+	const INTERVAL_SECONDS = 30 * MINUTE_IN_SECONDS;
+	const LOG_SOURCE       = 'bd-subscription-watchdog';
 
 	/**
 	 * How recent the subscription's last order may be before we treat a
@@ -39,52 +39,46 @@ class BD_Watchdog {
 	 * Register runtime hooks. Called after the plugin's other classes load.
 	 */
 	public static function init() {
-		add_filter( 'cron_schedules', array( __CLASS__, 'add_interval' ) ); // phpcs:ignore WordPress.WP.CronInterval.ChangeDetected -- custom 30-minute watchdog interval.
 		add_action( self::CRON_HOOK, array( __CLASS__, 'run' ) );
-		// Safety net: re-create the schedule if it was lost (e.g. wiped cron).
+		// Schedule on init (Action Scheduler is reliably loaded by then) and
+		// re-create the job if it was ever lost.
 		add_action( 'init', array( __CLASS__, 'maybe_reschedule' ) );
 	}
 
 	/**
-	 * Add the custom 30-minute cron interval.
-	 *
-	 * @param array $schedules Existing schedules.
-	 * @return array
-	 */
-	public static function add_interval( $schedules ) {
-		$schedules[ self::CRON_INTERVAL ] = array(
-			'interval' => 30 * MINUTE_IN_SECONDS,
-			'display'  => __( 'Every 30 minutes (BD Watchdog)', 'bd-subscription-mailer' ),
-		);
-		return $schedules;
-	}
-
-	/**
-	 * Schedule the recurring event. Hooked on plugin activation.
+	 * Schedule the recurring action. Hooked on plugin activation and run as
+	 * the init safety net. Idempotent.
 	 */
 	public static function schedule() {
-		// Make sure the interval exists even if init() has not run yet.
-		add_filter( 'cron_schedules', array( __CLASS__, 'add_interval' ) ); // phpcs:ignore WordPress.WP.CronInterval.ChangeDetected -- custom watchdog interval.
+		if ( ! function_exists( 'as_schedule_recurring_action' ) || ! function_exists( 'as_next_scheduled_action' ) ) {
+			return;
+		}
 
-		if ( ! wp_next_scheduled( self::CRON_HOOK ) ) {
-			wp_schedule_event( time() + self::GRACE_SECONDS, self::CRON_INTERVAL, self::CRON_HOOK );
+		// Remove any legacy WP-Cron event from older versions (does not touch
+		// Action Scheduler actions).
+		if ( wp_next_scheduled( self::CRON_HOOK ) ) {
+			wp_clear_scheduled_hook( self::CRON_HOOK );
+		}
+
+		if ( false === as_next_scheduled_action( self::CRON_HOOK, null, BDSM_AS_GROUP ) ) {
+			as_schedule_recurring_action( time() + self::GRACE_SECONDS, self::INTERVAL_SECONDS, self::CRON_HOOK, array(), BDSM_AS_GROUP );
 		}
 	}
 
 	/**
-	 * Clear the recurring event. Hooked on plugin deactivation.
+	 * Cancel the recurring action. Hooked on plugin deactivation.
 	 */
 	public static function unschedule() {
-		wp_clear_scheduled_hook( self::CRON_HOOK );
+		if ( function_exists( 'as_unschedule_all_actions' ) ) {
+			as_unschedule_all_actions( self::CRON_HOOK, array(), BDSM_AS_GROUP );
+		}
 	}
 
 	/**
 	 * Re-register the schedule if it has gone missing.
 	 */
 	public static function maybe_reschedule() {
-		if ( ! wp_next_scheduled( self::CRON_HOOK ) ) {
-			self::schedule();
-		}
+		self::schedule();
 	}
 
 	/**

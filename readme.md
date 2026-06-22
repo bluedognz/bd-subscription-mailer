@@ -99,7 +99,7 @@ A successful payment also cancels the queue immediately. A repeat failure restar
 
 A self-contained module (`includes/class-bd-watchdog.php`) that recovers subscriptions which were paid but left stuck **on-hold** — typically a Stripe webhook race or a stale cache that stopped the status update firing.
 
-- Runs on its own **30-minute WP-Cron** event (separate from the Action Scheduler email jobs).
+- Runs on its own recurring **30-minute Action Scheduler** job (same scheduler and group as the email jobs; visible on the Queue tab).
 - Each run scans up to 50 on-hold subscriptions, skips any whose latest order is under 15 minutes old, and looks for a renewal order marked completed/processing and paid within the last 6 hours. Matches are switched to **active** with an audit note.
 - When anything is fixed it emails a diagnostic report to `admin_email` (filter `bd_watchdog_alert_email` to redirect) and logs a warning to WooCommerce → Status → Logs under source `bd-subscription-watchdog`.
 

@@ -12,6 +12,7 @@ $bdsm_items = BDSM_Admin::get_pending_actions();
 $bdsm_hook_labels = array(
 	'bdsm_send_failed_payment_email' => __( 'Failed Payment email', 'bd-subscription-mailer' ),
 	'bdsm_daily_card_expiry_check'   => __( 'Daily card expiry check', 'bd-subscription-mailer' ),
+	'bd_watchdog_run'                => __( 'Subscription watchdog', 'bd-subscription-mailer' ),
 );
 ?>
 
