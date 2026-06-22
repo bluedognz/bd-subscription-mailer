@@ -95,6 +95,16 @@ A successful payment also cancels the queue immediately. A repeat failure restar
 
 **Card Expiry** runs daily at 7:00am UTC, on active subscriptions only. Expiry is read from `_stripe_card_expiry_month` / `_stripe_card_expiry_year` on the subscription or its parent order, with `_payment_method_expiry_date` (`MM/YY`, `MM/YYYY` or `YYYY-MM`) as fallback; subscriptions with no card data are skipped. Sent warnings are recorded per subscription **and card expiry date** in `bdSM_expiry_sent`, so duplicates are impossible but a newly saved card gets a fresh set of warnings. If a tier's exact day was missed (site offline etc.), the most urgent applicable warning is sent on the next run instead of being lost.
 
+## Subscription watchdog
+
+A self-contained module (`includes/class-bd-watchdog.php`) that recovers subscriptions which were paid but left stuck **on-hold** — typically a Stripe webhook race or a stale cache that stopped the status update firing.
+
+- Runs on its own **30-minute WP-Cron** event (separate from the Action Scheduler email jobs).
+- Each run scans up to 50 on-hold subscriptions, skips any whose latest order is under 15 minutes old, and looks for a renewal order marked completed/processing and paid within the last 6 hours. Matches are switched to **active** with an audit note.
+- When anything is fixed it emails a diagnostic report to `admin_email` (filter `bd_watchdog_alert_email` to redirect) and logs a warning to WooCommerce → Status → Logs under source `bd-subscription-watchdog`.
+
+No new tables, no settings — it just runs. It requires WooCommerce Subscriptions (guarded) and is scheduled/cleared automatically on plugin activation/deactivation.
+
 ## Copying content between sites
 
 The **Export / Import** tab moves email content between sites without retyping. Export produces a Base64 string covering the **Failed Payment** emails, the **Card Expiry** emails, and (optionally on import) the support link + CC addresses. Paste it into the Import box on the other site and tick which sections to apply — leave **Settings** unticked to keep that site's own CC addresses.
