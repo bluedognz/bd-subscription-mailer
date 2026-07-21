@@ -149,6 +149,13 @@ class BDSM_Card_Expiry {
 	 * @return array{0:int,1:int}|null [month, year] or null when unknown.
 	 */
 	private function get_card_expiry( $subscription ) {
+		// Primary source: the saved payment token, which is where WooCommerce
+		// (and the Stripe gateway) actually stores card expiry.
+		$from_token = $this->get_expiry_from_token( $subscription );
+		if ( null !== $from_token ) {
+			return $from_token;
+		}
+
 		$sources = array( $subscription );
 		$parent  = $subscription->get_parent();
 		if ( $parent ) {
@@ -181,6 +188,74 @@ class BDSM_Card_Expiry {
 			if ( $month >= 1 && $month <= 12 && $year > 2000 ) {
 				return array( $month, $year );
 			}
+		}
+
+		return null;
+	}
+
+	/**
+	 * Card expiry from the customer's saved payment token.
+	 *
+	 * Prefers the token the subscription actually pays with (matched on the
+	 * gateway's stored source / payment-method ID), then the customer's
+	 * default card, then their most recent card. Non-card tokens are ignored.
+	 *
+	 * @param WC_Subscription $subscription Subscription.
+	 * @return array{0:int,1:int}|null [month, year] or null when unknown.
+	 */
+	private function get_expiry_from_token( $subscription ) {
+		if ( ! class_exists( 'WC_Payment_Tokens' ) ) {
+			return null;
+		}
+
+		$user_id = $subscription->get_user_id();
+		if ( ! $user_id ) {
+			return null;
+		}
+
+		$tokens = WC_Payment_Tokens::get_customer_tokens( $user_id );
+		if ( empty( $tokens ) ) {
+			return null;
+		}
+
+		// The gateway's stored reference for this subscription's card.
+		$wanted = '';
+		foreach ( array( '_stripe_source_id', '_stripe_payment_method_id', '_payment_method_token' ) as $key ) {
+			$value = (string) $subscription->get_meta( $key );
+			if ( '' !== $value ) {
+				$wanted = $value;
+				break;
+			}
+		}
+
+		$match   = null;
+		$default = null;
+		$newest  = null;
+
+		foreach ( $tokens as $token ) {
+			if ( ! is_a( $token, 'WC_Payment_Token_CC' ) ) {
+				continue; // Ignore non-card tokens (no expiry data).
+			}
+			if ( '' !== $wanted && $token->get_token() === $wanted ) {
+				$match = $token;
+				break;
+			}
+			if ( $token->is_default() ) {
+				$default = $token;
+			}
+			$newest = $token;
+		}
+
+		$token = $match ? $match : ( $default ? $default : $newest );
+		if ( ! $token ) {
+			return null;
+		}
+
+		$month = (int) $token->get_expiry_month();
+		$year  = (int) $token->get_expiry_year();
+
+		if ( $month >= 1 && $month <= 12 && $year > 0 ) {
+			return array( $month, $this->normalize_year( $year ) );
 		}
 
 		return null;

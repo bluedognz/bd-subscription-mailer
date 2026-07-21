@@ -93,7 +93,7 @@ Notes:
 - subscription cancelled/expired → remaining emails cancelled.
 A successful payment also cancels the queue immediately. A repeat failure restarts the sequence from the new failure date.
 
-**Card Expiry** runs daily at 7:00am UTC, on active subscriptions only. Expiry is read from `_stripe_card_expiry_month` / `_stripe_card_expiry_year` on the subscription or its parent order, with `_payment_method_expiry_date` (`MM/YY`, `MM/YYYY` or `YYYY-MM`) as fallback; subscriptions with no card data are skipped. Sent warnings are recorded per subscription **and card expiry date** in `bdSM_expiry_sent`, so duplicates are impossible but a newly saved card gets a fresh set of warnings. If a tier's exact day was missed (site offline etc.), the most urgent applicable warning is sent on the next run instead of being lost.
+**Card Expiry** runs daily at 7:00am UTC, on active subscriptions only. Expiry is read from the customer's **saved payment token** (`WC_Payment_Tokens`) — where WooCommerce and the Stripe gateway actually store it — preferring the token the subscription pays with, then the customer's default card, then their most recent card. Order meta (`_stripe_card_expiry_month` / `_stripe_card_expiry_year`, then `_payment_method_expiry_date` as `MM/YY`, `MM/YYYY` or `YYYY-MM`) is used as a fallback. Subscriptions with no card data, and non-card tokens, are skipped. Sent warnings are recorded per subscription **and card expiry date** in `bdSM_expiry_sent`, so duplicates are impossible but a newly saved card gets a fresh set of warnings. If a tier's exact day was missed (site offline etc.), the most urgent applicable warning is sent on the next run instead of being lost.
 
 ## Subscription watchdog
 
