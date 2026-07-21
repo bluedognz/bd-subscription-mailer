@@ -31,6 +31,7 @@ class BDSM_Admin {
 			'task-reminder'  => __( 'Task Reminder', 'bd-subscription-mailer' ),
 			'failed-payment' => __( 'Failed Payment', 'bd-subscription-mailer' ),
 			'card-expiry'    => __( 'Card Expiry', 'bd-subscription-mailer' ),
+			'cards'          => __( 'Cards', 'bd-subscription-mailer' ),
 			'export-import'  => __( 'Export / Import', 'bd-subscription-mailer' ),
 			'log'            => __( 'Log', 'bd-subscription-mailer' ),
 			'queue'          => __( 'Queue', 'bd-subscription-mailer' ),
@@ -154,6 +155,11 @@ class BDSM_Admin {
 
 			case 'import_data':
 				$this->import_data();
+				break;
+
+			case 'run_card_expiry_check':
+				do_action( 'bdsm_daily_card_expiry_check' );
+				$this->redirect( 'cards' );
 				break;
 
 			case 'clear_log':

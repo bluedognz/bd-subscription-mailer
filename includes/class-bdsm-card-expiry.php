@@ -17,10 +17,8 @@ class BDSM_Card_Expiry {
 
 	/**
 	 * Warning tiers in ascending order (days before expiry).
-	 *
-	 * @var int[]
 	 */
-	private $thresholds = array( 7, 20, 45 );
+	const THRESHOLDS = array( 7, 20, 45 );
 
 	/**
 	 * Hook registration.
@@ -73,29 +71,16 @@ class BDSM_Card_Expiry {
 	 * @param WC_Subscription $subscription Active subscription.
 	 */
 	private function check_subscription( $subscription ) {
-		$expiry = $this->get_card_expiry( $subscription );
+		$expiry = self::get_card_expiry( $subscription );
 		if ( null === $expiry ) {
 			return; // No card expiry data — skip silently.
 		}
 
 		list( $month, $year ) = $expiry;
 
-		// Card is valid through the last day of its expiry month (UTC).
-		$expiry_ts  = gmmktime( 23, 59, 59, $month + 1, 0, $year );
-		$days_until = (int) floor( ( $expiry_ts - time() ) / DAY_IN_SECONDS );
+		$days_until = self::days_until_expiry( $month, $year );
+		$tier       = self::tier_for_days( $days_until );
 
-		if ( $days_until < 0 || $days_until > max( $this->thresholds ) ) {
-			return;
-		}
-
-		// The most urgent applicable tier: smallest threshold >= days remaining.
-		$tier = null;
-		foreach ( $this->thresholds as $threshold ) {
-			if ( $days_until <= $threshold ) {
-				$tier = $threshold;
-				break;
-			}
-		}
 		if ( null === $tier ) {
 			return;
 		}
@@ -148,10 +133,10 @@ class BDSM_Card_Expiry {
 	 * @param WC_Subscription $subscription Subscription.
 	 * @return array{0:int,1:int}|null [month, year] or null when unknown.
 	 */
-	private function get_card_expiry( $subscription ) {
+	public static function get_card_expiry( $subscription ) {
 		// Primary source: the saved payment token, which is where WooCommerce
 		// (and the Stripe gateway) actually stores card expiry.
-		$from_token = $this->get_expiry_from_token( $subscription );
+		$from_token = self::get_expiry_from_token( $subscription );
 		if ( null !== $from_token ) {
 			return $from_token;
 		}
@@ -166,7 +151,7 @@ class BDSM_Card_Expiry {
 			$month = (int) $source->get_meta( '_stripe_card_expiry_month' );
 			$year  = (int) $source->get_meta( '_stripe_card_expiry_year' );
 			if ( $month >= 1 && $month <= 12 && $year > 0 ) {
-				return array( $month, $this->normalize_year( $year ) );
+				return array( $month, self::normalize_year( $year ) );
 			}
 		}
 
@@ -178,7 +163,7 @@ class BDSM_Card_Expiry {
 			}
 			if ( preg_match( '#^(\d{1,2})\s*/\s*(\d{2,4})$#', trim( $raw ), $m ) ) {
 				$month = (int) $m[1];
-				$year  = $this->normalize_year( (int) $m[2] );
+				$year  = self::normalize_year( (int) $m[2] );
 			} elseif ( preg_match( '#^(\d{4})-(\d{1,2})$#', trim( $raw ), $m ) ) {
 				$month = (int) $m[2];
 				$year  = (int) $m[1];
@@ -203,7 +188,69 @@ class BDSM_Card_Expiry {
 	 * @param WC_Subscription $subscription Subscription.
 	 * @return array{0:int,1:int}|null [month, year] or null when unknown.
 	 */
-	private function get_expiry_from_token( $subscription ) {
+	private static function get_expiry_from_token( $subscription ) {
+		$token = self::find_token( $subscription );
+		if ( ! $token ) {
+			return null;
+		}
+
+		$month = (int) $token->get_expiry_month();
+		$year  = (int) $token->get_expiry_year();
+
+		if ( $month >= 1 && $month <= 12 && $year > 0 ) {
+			return array( $month, self::normalize_year( $year ) );
+		}
+
+		return null;
+	}
+
+	/**
+	 * Card details for display: month, year, last4, brand and which source
+	 * the data came from. Mirrors exactly what the daily job sees.
+	 *
+	 * @param WC_Subscription $subscription Subscription.
+	 * @return array|null
+	 */
+	public static function get_card_details( $subscription ) {
+		$token = self::find_token( $subscription );
+
+		if ( $token ) {
+			$month = (int) $token->get_expiry_month();
+			$year  = (int) $token->get_expiry_year();
+			if ( $month >= 1 && $month <= 12 && $year > 0 ) {
+				return array(
+					'month'  => $month,
+					'year'   => self::normalize_year( $year ),
+					'last4'  => $token->get_last4(),
+					'brand'  => $token->get_card_type(),
+					'source' => 'token',
+				);
+			}
+		}
+
+		$expiry = self::get_card_expiry( $subscription );
+		if ( null === $expiry ) {
+			return null;
+		}
+
+		return array(
+			'month'  => $expiry[0],
+			'year'   => $expiry[1],
+			'last4'  => '',
+			'brand'  => '',
+			'source' => 'meta',
+		);
+	}
+
+	/**
+	 * Locate the card token for a subscription: the one it actually pays
+	 * with where identifiable, else the customer's default card, else their
+	 * most recent card.
+	 *
+	 * @param WC_Subscription $subscription Subscription.
+	 * @return WC_Payment_Token_CC|null
+	 */
+	private static function find_token( $subscription ) {
 		if ( ! class_exists( 'WC_Payment_Tokens' ) ) {
 			return null;
 		}
@@ -246,19 +293,7 @@ class BDSM_Card_Expiry {
 			$newest = $token;
 		}
 
-		$token = $match ? $match : ( $default ? $default : $newest );
-		if ( ! $token ) {
-			return null;
-		}
-
-		$month = (int) $token->get_expiry_month();
-		$year  = (int) $token->get_expiry_year();
-
-		if ( $month >= 1 && $month <= 12 && $year > 0 ) {
-			return array( $month, $this->normalize_year( $year ) );
-		}
-
-		return null;
+		return $match ? $match : ( $default ? $default : $newest );
 	}
 
 	/**
@@ -267,8 +302,62 @@ class BDSM_Card_Expiry {
 	 * @param int $year Year.
 	 * @return int
 	 */
-	private function normalize_year( $year ) {
+	private static function normalize_year( $year ) {
 		return $year < 100 ? 2000 + $year : $year;
+	}
+
+	/**
+	 * Whole days until a card expires. Cards are valid through the last day
+	 * of their expiry month (UTC). Negative once expired.
+	 *
+	 * @param int $month Expiry month (1-12).
+	 * @param int $year  Expiry year (4-digit).
+	 * @return int
+	 */
+	public static function days_until_expiry( $month, $year ) {
+		$expiry_ts = gmmktime( 23, 59, 59, (int) $month + 1, 0, (int) $year );
+		return (int) floor( ( $expiry_ts - time() ) / DAY_IN_SECONDS );
+	}
+
+	/**
+	 * The most urgent applicable warning tier for a number of days remaining,
+	 * or null when no warning is due (expired, or too far out).
+	 *
+	 * @param int $days_until Days until expiry.
+	 * @return int|null
+	 */
+	public static function tier_for_days( $days_until ) {
+		if ( $days_until < 0 || $days_until > max( self::THRESHOLDS ) ) {
+			return null;
+		}
+
+		foreach ( self::THRESHOLDS as $threshold ) {
+			if ( $days_until <= $threshold ) {
+				return $threshold;
+			}
+		}
+
+		return null;
+	}
+
+	/**
+	 * Every warning already sent, as [ subscription_id ][ card_key ] => days[].
+	 *
+	 * @return array
+	 */
+	public static function get_sent_warnings() {
+		global $wpdb;
+		$table = bdsm_expiry_table();
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- custom table name.
+		$rows = (array) $wpdb->get_results( "SELECT subscription_id, days_before, card_expiry FROM {$table}" );
+
+		$map = array();
+		foreach ( $rows as $row ) {
+			$map[ (int) $row->subscription_id ][ $row->card_expiry ][] = (int) $row->days_before;
+		}
+
+		return $map;
 	}
 
 	/**

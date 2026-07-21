@@ -111,6 +111,14 @@ The **Export / Import** tab moves email content between sites without retyping. 
 
 Task Reminder content is deliberately excluded: it is keyed by product ID, which differs per site. The plugin-enable and Task Reminder toggles are never imported either, so a site's on/off state is always preserved.
 
+## Cards tab
+
+A read-only overview of every **active** subscription and the card it will be charged against, resolved with the *same* lookup the daily job uses — so it doubles as a diagnostic. Shows brand/last4, expiry, days remaining, a colour-coded status (Expired / Critical / Warning / Due soon / OK), and which warning tiers have already been sent. Rows are sorted soonest-first.
+
+A subscription showing **"No card data"** can never receive a warning — that's the first thing to check if expiry emails aren't arriving.
+
+The **Run expiry check now** button executes the daily job immediately (it sends real emails to anyone currently due; already-sent warnings are never repeated).
+
 ## Log & Queue
 
 - **Log** — last 200 events (sent / skipped / cancelled) with date, feature, customer, subscription and message number. Clear button included. The table self-trims to 1,000 rows.
