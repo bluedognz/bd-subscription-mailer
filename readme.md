@@ -117,6 +117,10 @@ A read-only overview of every **active** subscription and the card it will be ch
 
 A subscription showing **"No card data"** can never receive a warning — that's the first thing to check if expiry emails aren't arriving.
 
+Each row shows where its expiry came from: **live from Stripe**, **saved token (snapshot)**, or **order meta**. This matters — WooCommerce stores the card details captured when the token was saved, and Stripe silently updates reissued cards via the Visa/Mastercard account updater, so the local snapshot drifts out of date. **Refresh card data from Stripe** pulls live expiry dates for all active subscriptions (read-only, sends no emails); the daily job refreshes them automatically too. Requires a secret key in the WooCommerce Stripe settings — without one, a warning is shown and the local snapshot is used.
+
+Rows marked **"Stale — card replaced"** had a successful payment *after* their stated expiry, which proves the stored date is fiction. These are never emailed.
+
 The **Run expiry check now** button executes the daily job immediately (it sends real emails to anyone currently due; already-sent warnings are never repeated).
 
 ## Log & Queue

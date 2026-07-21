@@ -3,7 +3,7 @@
  * Plugin Name:       BD Subscription Mailer
  * Plugin URI:        https://github.com/bluedognz/bd-subscription-mailer
  * Description:       Lightweight automated emails for WooCommerce Subscriptions — payment task reminders, failed payment sequences and card expiry warnings. Replaces AutomateWoo.
- * Version:           1.9.0
+ * Version:           1.10.0
  * Author:            Blue Dog Digital
  * Author URI:        https://www.bluedogdigitalmarketing.com/
  * Text Domain:       bd-subscription-mailer
@@ -17,7 +17,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'BDSM_VERSION', '1.9.0' );
+define( 'BDSM_VERSION', '1.10.0' );
 define( 'BDSM_PLUGIN_FILE', __FILE__ );
 define( 'BDSM_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'BDSM_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
@@ -98,6 +98,7 @@ function bdsm_bootstrap() {
 	require_once BDSM_PLUGIN_DIR . 'includes/class-bdsm-mailer.php';
 	require_once BDSM_PLUGIN_DIR . 'includes/class-bdsm-task-reminder.php';
 	require_once BDSM_PLUGIN_DIR . 'includes/class-bdsm-failed-payment.php';
+	require_once BDSM_PLUGIN_DIR . 'includes/class-bdsm-stripe.php';
 	require_once BDSM_PLUGIN_DIR . 'includes/class-bdsm-card-expiry.php';
 
 	new BDSM_Task_Reminder();

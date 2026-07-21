@@ -13,7 +13,8 @@ defined( 'ABSPATH' ) || exit;
  */
 class BDSM_Card_Expiry {
 
-	const DAILY_HOOK = 'bdsm_daily_card_expiry_check';
+	const DAILY_HOOK   = 'bdsm_daily_card_expiry_check';
+	const REFRESH_HOOK = 'bdsm_refresh_stripe_cards';
 
 	/**
 	 * Warning tiers in ascending order (days before expiry).
@@ -26,6 +27,27 @@ class BDSM_Card_Expiry {
 	public function __construct() {
 		add_action( 'init', array( $this, 'maybe_schedule_daily_job' ) );
 		add_action( self::DAILY_HOOK, array( $this, 'run_daily_check' ) );
+		add_action( self::REFRESH_HOOK, array( $this, 'refresh_all_from_stripe' ) );
+	}
+
+	/**
+	 * Refresh every active subscription's card data from Stripe.
+	 */
+	public function refresh_all_from_stripe() {
+		if ( ! class_exists( 'BDSM_Stripe' ) || ! BDSM_Stripe::is_available() || ! function_exists( 'wcs_get_subscriptions' ) ) {
+			return;
+		}
+
+		$subscriptions = wcs_get_subscriptions(
+			array(
+				'subscription_status'    => 'active',
+				'subscriptions_per_page' => -1,
+			)
+		);
+
+		foreach ( $subscriptions as $subscription ) {
+			BDSM_Stripe::refresh( $subscription );
+		}
 	}
 
 	/**
@@ -60,7 +82,14 @@ class BDSM_Card_Expiry {
 			)
 		);
 
+		$use_stripe = class_exists( 'BDSM_Stripe' ) && BDSM_Stripe::is_available();
+
 		foreach ( $subscriptions as $subscription ) {
+			// Refresh from Stripe first so warnings use the live expiry, not
+			// the (often stale) snapshot WooCommerce saved with the token.
+			if ( $use_stripe ) {
+				BDSM_Stripe::refresh( $subscription );
+			}
 			$this->check_subscription( $subscription );
 		}
 	}
@@ -71,12 +100,19 @@ class BDSM_Card_Expiry {
 	 * @param WC_Subscription $subscription Active subscription.
 	 */
 	private function check_subscription( $subscription ) {
-		$expiry = self::get_card_expiry( $subscription );
-		if ( null === $expiry ) {
+		$card = self::get_card_details( $subscription );
+		if ( null === $card ) {
 			return; // No card expiry data — skip silently.
 		}
 
-		list( $month, $year ) = $expiry;
+		// A payment succeeded after this card supposedly expired, so the
+		// stored date is provably stale (card was replaced/auto-updated).
+		if ( ! empty( $card['stale'] ) ) {
+			return;
+		}
+
+		$month = $card['month'];
+		$year  = $card['year'];
 
 		$days_until = self::days_until_expiry( $month, $year );
 		$tier       = self::tier_for_days( $days_until );
@@ -212,34 +248,113 @@ class BDSM_Card_Expiry {
 	 * @return array|null
 	 */
 	public static function get_card_details( $subscription ) {
+		// 1. Live data previously fetched from Stripe — the only source that
+		// reflects account-updater changes.
+		if ( class_exists( 'BDSM_Stripe' ) ) {
+			$stored = BDSM_Stripe::get_stored( $subscription );
+			if ( $stored ) {
+				return self::with_stale_flag(
+					$subscription,
+					array(
+						'month'   => $stored['month'],
+						'year'    => $stored['year'],
+						'last4'   => $stored['last4'],
+						'brand'   => $stored['brand'],
+						'source'  => 'stripe',
+						'checked' => $stored['checked'],
+					)
+				);
+			}
+		}
+
+		// 2. The saved payment token (a snapshot; may be out of date).
 		$token = self::find_token( $subscription );
 
 		if ( $token ) {
 			$month = (int) $token->get_expiry_month();
 			$year  = (int) $token->get_expiry_year();
 			if ( $month >= 1 && $month <= 12 && $year > 0 ) {
-				return array(
-					'month'  => $month,
-					'year'   => self::normalize_year( $year ),
-					'last4'  => $token->get_last4(),
-					'brand'  => $token->get_card_type(),
-					'source' => 'token',
+				return self::with_stale_flag(
+					$subscription,
+					array(
+						'month'   => $month,
+						'year'    => self::normalize_year( $year ),
+						'last4'   => $token->get_last4(),
+						'brand'   => $token->get_card_type(),
+						'source'  => 'token',
+						'checked' => 0,
+					)
 				);
 			}
 		}
 
+		// 3. Legacy order meta.
 		$expiry = self::get_card_expiry( $subscription );
 		if ( null === $expiry ) {
 			return null;
 		}
 
-		return array(
-			'month'  => $expiry[0],
-			'year'   => $expiry[1],
-			'last4'  => '',
-			'brand'  => '',
-			'source' => 'meta',
+		return self::with_stale_flag(
+			$subscription,
+			array(
+				'month'   => $expiry[0],
+				'year'    => $expiry[1],
+				'last4'   => '',
+				'brand'   => '',
+				'source'  => 'meta',
+				'checked' => 0,
+			)
 		);
+	}
+
+	/**
+	 * Mark card data as stale when a payment succeeded after the card's
+	 * stated expiry — proof the card was replaced or auto-updated and the
+	 * stored date is fiction.
+	 *
+	 * @param WC_Subscription $subscription Subscription.
+	 * @param array           $details      Card details.
+	 * @return array
+	 */
+	private static function with_stale_flag( $subscription, array $details ) {
+		$expiry_ts = gmmktime( 23, 59, 59, (int) $details['month'] + 1, 0, (int) $details['year'] );
+		$last_paid = self::last_paid_timestamp( $subscription );
+
+		$details['stale']     = ( $last_paid > 0 && $last_paid > $expiry_ts );
+		$details['last_paid'] = $last_paid;
+
+		return $details;
+	}
+
+	/**
+	 * Timestamp of the most recent successful payment, or 0.
+	 *
+	 * @param WC_Subscription $subscription Subscription.
+	 * @return int
+	 */
+	private static function last_paid_timestamp( $subscription ) {
+		try {
+			$date = $subscription->get_date( 'last_order_date_paid', 'gmt' );
+			if ( ! empty( $date ) ) {
+				$timestamp = strtotime( $date . ' UTC' );
+				if ( $timestamp ) {
+					return (int) $timestamp;
+				}
+			}
+		} catch ( Exception $e ) {
+			// Older WooCommerce Subscriptions — fall through to the order.
+			unset( $e );
+		}
+
+		$last_order = $subscription->get_last_order( 'all', array( 'parent', 'renewal' ) );
+		if ( $last_order ) {
+			$paid = $last_order->get_date_paid();
+			if ( $paid ) {
+				return $paid->getTimestamp();
+			}
+		}
+
+		return 0;
 	}
 
 	/**

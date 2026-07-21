@@ -10,11 +10,13 @@
 
 defined( 'ABSPATH' ) || exit;
 
-$bdsm_rows      = array();
-$bdsm_sent_map  = BDSM_Card_Expiry::get_sent_warnings();
-$bdsm_no_card   = 0;
-$bdsm_expired   = 0;
-$bdsm_due_soon  = 0;
+$bdsm_rows     = array();
+$bdsm_sent_map = BDSM_Card_Expiry::get_sent_warnings();
+$bdsm_no_card  = 0;
+$bdsm_expired  = 0;
+$bdsm_due_soon = 0;
+$bdsm_stale    = 0;
+$bdsm_stripe   = class_exists( 'BDSM_Stripe' ) && BDSM_Stripe::is_available();
 
 if ( function_exists( 'wcs_get_subscriptions' ) ) {
 	$bdsm_subscriptions = wcs_get_subscriptions(
@@ -39,7 +41,9 @@ if ( function_exists( 'wcs_get_subscriptions' ) ) {
 
 		$bdsm_days = BDSM_Card_Expiry::days_until_expiry( $bdsm_card['month'], $bdsm_card['year'] );
 
-		if ( $bdsm_days < 0 ) {
+		if ( ! empty( $bdsm_card['stale'] ) ) {
+			++$bdsm_stale;
+		} elseif ( $bdsm_days < 0 ) {
 			++$bdsm_expired;
 		} elseif ( $bdsm_days <= max( BDSM_Card_Expiry::THRESHOLDS ) ) {
 			++$bdsm_due_soon;
@@ -69,8 +73,30 @@ if ( function_exists( 'wcs_get_subscriptions' ) ) {
 	<strong><?php echo esc_html( count( $bdsm_rows ) ); ?></strong> <?php esc_html_e( 'active subscriptions', 'bd-subscription-mailer' ); ?> &nbsp;|&nbsp;
 	<span style="color:#d63638;"><strong><?php echo esc_html( $bdsm_expired ); ?></strong> <?php esc_html_e( 'expired', 'bd-subscription-mailer' ); ?></span> &nbsp;|&nbsp;
 	<span style="color:#dba617;"><strong><?php echo esc_html( $bdsm_due_soon ); ?></strong> <?php esc_html_e( 'expiring within 45 days', 'bd-subscription-mailer' ); ?></span> &nbsp;|&nbsp;
+	<span style="color:#2271b1;"><strong><?php echo esc_html( $bdsm_stale ); ?></strong> <?php esc_html_e( 'stale (card replaced)', 'bd-subscription-mailer' ); ?></span> &nbsp;|&nbsp;
 	<span style="color:#646970;"><strong><?php echo esc_html( $bdsm_no_card ); ?></strong> <?php esc_html_e( 'with no card data', 'bd-subscription-mailer' ); ?></span>
 </p>
+
+<?php if ( ! $bdsm_stripe ) : ?>
+	<div class="notice notice-warning inline"><p>
+		<?php esc_html_e( 'No Stripe secret key found in the WooCommerce Stripe settings, so expiry dates below come from WooCommerce\'s saved snapshot and may be out of date (Stripe silently updates reissued cards). Warnings still send, but accuracy is not guaranteed.', 'bd-subscription-mailer' ); ?>
+	</p></div>
+<?php endif; ?>
+
+<?php if ( isset( $_GET['bdsm_refresh_queued'] ) ) : // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- display only. ?>
+	<div class="notice notice-info is-dismissible"><p>
+		<?php esc_html_e( 'Stripe refresh queued — it runs in the background. Reload this page in a minute to see updated data.', 'bd-subscription-mailer' ); ?>
+	</p></div>
+<?php endif; ?>
+
+<?php if ( $bdsm_stripe ) : ?>
+<form method="post" style="margin:12px 0 0;">
+	<?php wp_nonce_field( 'bdsm_refresh_stripe_cards' ); ?>
+	<input type="hidden" name="bdsm_action" value="refresh_stripe_cards">
+	<?php submit_button( __( 'Refresh card data from Stripe', 'bd-subscription-mailer' ), 'primary', 'submit', false ); ?>
+	<span class="description" style="margin-left:8px;"><?php esc_html_e( 'Fetches live expiry dates for all active subscriptions. Read-only; sends no emails.', 'bd-subscription-mailer' ); ?></span>
+</form>
+<?php endif; ?>
 
 <form method="post" style="margin:12px 0;">
 	<?php wp_nonce_field( 'bdsm_run_card_expiry_check' ); ?>
@@ -130,7 +156,10 @@ if ( function_exists( 'wcs_get_subscriptions' ) ) {
 						$bdsm_sent     = $bdsm_sent_map[ $bdsm_id ][ $bdsm_card_key ] ?? array();
 						sort( $bdsm_sent );
 
-						if ( $bdsm_days < 0 ) {
+						if ( ! empty( $bdsm_card['stale'] ) ) {
+							$bdsm_label = __( 'Stale — card replaced', 'bd-subscription-mailer' );
+							$bdsm_color = '#2271b1';
+						} elseif ( $bdsm_days < 0 ) {
 							$bdsm_label = __( 'EXPIRED', 'bd-subscription-mailer' );
 							$bdsm_color = '#d63638';
 						} elseif ( $bdsm_days <= 7 ) {
@@ -152,9 +181,25 @@ if ( function_exists( 'wcs_get_subscriptions' ) ) {
 							echo esc_html( $bdsm_card['brand'] ? ucfirst( $bdsm_card['brand'] ) : __( 'Card', 'bd-subscription-mailer' ) );
 							echo $bdsm_card['last4'] ? ' ••••' . esc_html( $bdsm_card['last4'] ) : '';
 							?>
-							<?php if ( 'meta' === $bdsm_card['source'] ) : ?>
-								<br><span style="color:#646970;font-size:11px;"><?php esc_html_e( 'from order meta', 'bd-subscription-mailer' ); ?></span>
-							<?php endif; ?>
+							<br>
+							<span style="color:#646970;font-size:11px;">
+								<?php
+								if ( 'stripe' === $bdsm_card['source'] ) {
+									$bdsm_checked = ! empty( $bdsm_card['checked'] )
+										? sprintf(
+											/* translators: %s: human-readable time difference. */
+											__( 'live from Stripe (%s ago)', 'bd-subscription-mailer' ),
+											human_time_diff( (int) $bdsm_card['checked'] )
+										)
+										: __( 'live from Stripe', 'bd-subscription-mailer' );
+									echo esc_html( $bdsm_checked );
+								} elseif ( 'token' === $bdsm_card['source'] ) {
+									esc_html_e( 'saved token (snapshot)', 'bd-subscription-mailer' );
+								} else {
+									esc_html_e( 'from order meta', 'bd-subscription-mailer' );
+								}
+								?>
+							</span>
 						</td>
 						<td><?php echo esc_html( sprintf( '%02d/%04d', $bdsm_card['month'], $bdsm_card['year'] ) ); ?></td>
 						<td><?php echo esc_html( $bdsm_days ); ?></td>

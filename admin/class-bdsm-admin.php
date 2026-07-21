@@ -162,6 +162,13 @@ class BDSM_Admin {
 				$this->redirect( 'cards' );
 				break;
 
+			case 'refresh_stripe_cards':
+				if ( function_exists( 'as_enqueue_async_action' ) ) {
+					as_enqueue_async_action( BDSM_Card_Expiry::REFRESH_HOOK, array(), BDSM_AS_GROUP );
+				}
+				$this->redirect_with( 'cards', 'bdsm_refresh_queued' );
+				break;
+
 			case 'clear_log':
 				BDSM_Logger::clear();
 				$this->redirect( 'log' );
