@@ -34,14 +34,15 @@ function bdsm_expiry_table() {
  */
 function bdsm_get_settings() {
 	$defaults = array(
-		'enabled'           => 'yes',
-		'feature1_enabled'  => 'no',
-		'support_link'      => '',
-		'from_name'         => '',
-		'from_email'        => '',
-		'task_reminder_cc'  => '',
-		'failed_payment_cc' => '',
-		'card_expiry_cc'    => '',
+		'enabled'              => 'yes',
+		'feature1_enabled'     => 'no',
+		'promo_footer_enabled' => 'yes',
+		'support_link'         => '',
+		'from_name'            => '',
+		'from_email'           => '',
+		'task_reminder_cc'     => '',
+		'failed_payment_cc'    => '',
+		'card_expiry_cc'       => '',
 	);
 	return wp_parse_args( (array) get_option( 'bdsm_settings', array() ), $defaults );
 }
@@ -74,6 +75,17 @@ function bdsm_feature1_enabled() {
 function bdsm_support_link() {
 	$settings = bdsm_get_settings();
 	return $settings['support_link'];
+}
+
+/**
+ * Is the "Sent via Subscription Mailer, by Blue Dog Software" email footer
+ * shown? Default on; a site can turn it off in Settings.
+ *
+ * @return bool
+ */
+function bdsm_promo_footer_enabled() {
+	$settings = bdsm_get_settings();
+	return 'yes' === $settings['promo_footer_enabled'];
 }
 
 /**

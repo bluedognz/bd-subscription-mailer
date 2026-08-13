@@ -42,6 +42,14 @@ defined( 'ABSPATH' ) || exit;
 							<?php echo esc_html( $bdsm_site_name ); ?>
 						</td>
 					</tr>
+					<?php if ( bdsm_promo_footer_enabled() ) : ?>
+					<tr>
+						<td style="padding:0 32px 16px;font-family:Helvetica,Arial,sans-serif;font-size:11px;color:#aaaaaa;text-align:center;">
+							<?php esc_html_e( 'Sent via Subscription Mailer, by Blue Dog Software.', 'bd-subscription-mailer' ); ?>
+							<a href="https://bluedog.software" style="color:#aaaaaa;text-decoration:underline;">bluedog.software</a>
+						</td>
+					</tr>
+					<?php endif; ?>
 				</table>
 			</td>
 		</tr>

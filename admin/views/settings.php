@@ -34,6 +34,15 @@ $bdsm_settings = bdsm_get_settings();
 			</td>
 		</tr>
 		<tr>
+			<th scope="row"><?php esc_html_e( 'Email branding', 'bd-subscription-mailer' ); ?></th>
+			<td>
+				<label>
+					<input type="checkbox" name="bdsm_promo_footer_enabled" value="1" <?php checked( 'yes', $bdsm_settings['promo_footer_enabled'] ); ?>>
+					<?php esc_html_e( 'Show "Sent via Subscription Mailer, by Blue Dog Software" in the footer of every email this plugin sends.', 'bd-subscription-mailer' ); ?>
+				</label>
+			</td>
+		</tr>
+		<tr>
 			<th scope="row">
 				<label for="bdsm_task_reminder_cc"><?php esc_html_e( 'Task Reminder CC', 'bd-subscription-mailer' ); ?></label>
 			</th>
