@@ -126,7 +126,7 @@ The **Run expiry check now** button executes the daily job immediately (it sends
 ## Log & Queue
 
 - **Log** — last 200 events (sent / skipped / cancelled) with date, feature, customer, subscription and message number. Clear button included. The table self-trims to 1,000 rows.
-- **Queue** — pending Action Scheduler actions created by this plugin only. Cancel a single queued email, or every queued email for a subscription ID at once.
+- **Queue** — pending Action Scheduler actions created by this plugin only, each showing the customer email for quick reference. Cancel a single queued email, or every queued email for a subscription ID at once.
 
 ## Uninstall
 
