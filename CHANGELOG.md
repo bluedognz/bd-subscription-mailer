@@ -2,6 +2,10 @@
 
 All notable changes to BD Subscription Mailer are documented here.
 
+## 1.12.2 — 2026-09-14
+- Added a WordPress-format readme.txt so the plugin update screen's Changelog and Description tabs show the full version history (PUC uses the GitHub release body as the changelog unless a readme.txt provides one).
+- Queue tab: subscription links now open in a new tab, with an icon indicating so.
+
 ## 1.12.1 — 2026-09-14
 - Added a full CHANGELOG.md so the plugin update screen's Changelog tab shows the complete version history, not just the latest release.
 

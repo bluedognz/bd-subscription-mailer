@@ -74,8 +74,10 @@ $bdsm_hook_labels = array(
 					<td><?php echo esc_html( $bdsm_hook_labels[ $bdsm_item['hook'] ] ?? $bdsm_item['hook'] ); ?></td>
 					<td>
 						<?php if ( $bdsm_sub_id ) : ?>
-							<a href="<?php echo esc_url( admin_url( 'post.php?post=' . $bdsm_sub_id . '&action=edit' ) ); ?>">
-								#<?php echo esc_html( $bdsm_sub_id ); ?>
+							<a href="<?php echo esc_url( admin_url( 'post.php?post=' . $bdsm_sub_id . '&action=edit' ) ); ?>"
+								target="_blank" rel="noopener noreferrer"
+								title="<?php esc_attr_e( 'Opens in a new tab', 'bd-subscription-mailer' ); ?>">
+								#<?php echo esc_html( $bdsm_sub_id ); ?><span class="dashicons dashicons-external" style="font-size:14px;width:14px;height:14px;vertical-align:text-top;text-decoration:none;"></span>
 							</a>
 						<?php else : ?>
 							—
