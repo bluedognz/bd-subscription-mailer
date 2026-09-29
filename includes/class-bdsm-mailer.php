@@ -19,10 +19,10 @@ class BDSM_Mailer {
 	 * @param string $subject Subject (may contain tags).
 	 * @param string $body    Body content (may contain tags).
 	 * @param array  $tags    Tag => value map, keys without braces.
-	 * @param string $cc      Optional CC address.
+	 * @param string $bcc     Optional BCC address (hidden from the recipient).
 	 * @return bool Whether wp_mail() accepted the message.
 	 */
-	public static function send( $to, $subject, $body, array $tags = array(), $cc = '' ) {
+	public static function send( $to, $subject, $body, array $tags = array(), $bcc = '' ) {
 		if ( ! is_email( $to ) ) {
 			return false;
 		}
@@ -36,8 +36,10 @@ class BDSM_Mailer {
 		if ( '' !== $from ) {
 			$headers[] = $from;
 		}
-		if ( is_email( $cc ) && 0 !== strcasecmp( $cc, $to ) ) {
-			$headers[] = 'Cc: ' . $cc;
+		// BCC (not CC): the monitoring copy must stay hidden from the customer
+		// so it never appears in headers or gets caught by Reply-All.
+		if ( is_email( $bcc ) && 0 !== strcasecmp( $bcc, $to ) ) {
+			$headers[] = 'Bcc: ' . $bcc;
 		}
 
 		return wp_mail( $to, $subject, $html, $headers );

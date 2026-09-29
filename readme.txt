@@ -3,7 +3,7 @@ Contributors: bluedogdigital
 Requires at least: 6.4
 Tested up to: 6.6
 Requires PHP: 8.1
-Stable tag: 1.12.2
+Stable tag: 1.12.3
 License: GPL-2.0+
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -20,6 +20,9 @@ BD Subscription Mailer sends three types of automated email for WooCommerce Subs
 All scheduling uses Action Scheduler (bundled with WooCommerce). All sending uses wp_mail(), so it works with WP Mail SMTP + Postmark. HPOS compatible. Includes a subscription watchdog, a Cards overview, per-editor test emails, export/import between sites, and GitHub auto-updates.
 
 == Changelog ==
+
+= 1.12.3 =
+* Monitoring copies are now sent as BCC instead of CC, so the address is hidden from the customer and never caught by Reply-All. The three Settings fields are relabelled Task Reminder / Failed Payment / Card Expiry BCC.
 
 = 1.12.2 =
 * Added a WordPress-format readme.txt so the plugin update screen's Changelog and Description tabs show the full version history and details.

@@ -2,6 +2,9 @@
 
 All notable changes to BD Subscription Mailer are documented here.
 
+## 1.12.3 — 2026-09-29
+- Monitoring copies now sent as BCC instead of CC, so the address is hidden from the customer and never caught by Reply-All. The three Settings fields are relabelled to BCC.
+
 ## 1.12.2 — 2026-09-14
 - Added a WordPress-format readme.txt so the plugin update screen's Changelog and Description tabs show the full version history (PUC uses the GitHub release body as the changelog unless a readme.txt provides one).
 - Queue tab: subscription links now open in a new tab, with an icon indicating so.

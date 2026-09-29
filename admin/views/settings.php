@@ -44,35 +44,35 @@ $bdsm_settings = bdsm_get_settings();
 		</tr>
 		<tr>
 			<th scope="row">
-				<label for="bdsm_task_reminder_cc"><?php esc_html_e( 'Task Reminder CC', 'bd-subscription-mailer' ); ?></label>
+				<label for="bdsm_task_reminder_cc"><?php esc_html_e( 'Task Reminder BCC', 'bd-subscription-mailer' ); ?></label>
 			</th>
 			<td>
 				<input type="email" class="regular-text" id="bdsm_task_reminder_cc" name="bdsm_task_reminder_cc"
 					value="<?php echo esc_attr( $bdsm_settings['task_reminder_cc'] ); ?>"
 					placeholder="cc@example.com">
-				<p class="description"><?php esc_html_e( 'Every Task Reminder email is CC\'d to this address. Leave empty for no CC.', 'bd-subscription-mailer' ); ?></p>
+				<p class="description"><?php esc_html_e( 'Every Task Reminder email is blind-copied (BCC) to this address, hidden from the customer. Leave empty for none.', 'bd-subscription-mailer' ); ?></p>
 			</td>
 		</tr>
 		<tr>
 			<th scope="row">
-				<label for="bdsm_failed_payment_cc"><?php esc_html_e( 'Failed Payment CC', 'bd-subscription-mailer' ); ?></label>
+				<label for="bdsm_failed_payment_cc"><?php esc_html_e( 'Failed Payment BCC', 'bd-subscription-mailer' ); ?></label>
 			</th>
 			<td>
 				<input type="email" class="regular-text" id="bdsm_failed_payment_cc" name="bdsm_failed_payment_cc"
 					value="<?php echo esc_attr( $bdsm_settings['failed_payment_cc'] ); ?>"
 					placeholder="cc@example.com">
-				<p class="description"><?php esc_html_e( 'Every Failed Payment email (customer and internal) is CC\'d to this address. Leave empty for no CC.', 'bd-subscription-mailer' ); ?></p>
+				<p class="description"><?php esc_html_e( 'Every Failed Payment email (customer and internal) is blind-copied (BCC) to this address, hidden from the customer. Leave empty for none.', 'bd-subscription-mailer' ); ?></p>
 			</td>
 		</tr>
 		<tr>
 			<th scope="row">
-				<label for="bdsm_card_expiry_cc"><?php esc_html_e( 'Card Expiry CC', 'bd-subscription-mailer' ); ?></label>
+				<label for="bdsm_card_expiry_cc"><?php esc_html_e( 'Card Expiry BCC', 'bd-subscription-mailer' ); ?></label>
 			</th>
 			<td>
 				<input type="email" class="regular-text" id="bdsm_card_expiry_cc" name="bdsm_card_expiry_cc"
 					value="<?php echo esc_attr( $bdsm_settings['card_expiry_cc'] ); ?>"
 					placeholder="cc@example.com">
-				<p class="description"><?php esc_html_e( 'Every Card Expiry warning is CC\'d to this address. Leave empty for no CC.', 'bd-subscription-mailer' ); ?></p>
+				<p class="description"><?php esc_html_e( 'Every Card Expiry warning is blind-copied (BCC) to this address, hidden from the customer. Leave empty for none.', 'bd-subscription-mailer' ); ?></p>
 			</td>
 		</tr>
 		<tr>
